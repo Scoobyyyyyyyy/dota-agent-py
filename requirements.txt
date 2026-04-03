@@ -1,0 +1,5 @@
+# Async HTTP client + server (replaces Node global fetch + http.createServer)
+aiohttp>=3.9,<4
+
+# Pydantic v2 — typed parsing of JSON game-state payloads
+pydantic>=2.7,<3

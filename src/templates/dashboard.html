@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentScoob — DOTA Dashboard</title>
+  <meta name="description" content="Live tracking dashboard for AgentScoob in Defense of the Agents" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Base ───────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-card: #111827;
+      --bg-card-hover: #1a2332;
+      --bg-glass: rgba(17, 24, 39, 0.7);
+      --border: rgba(99, 102, 241, 0.15);
+      --border-glow: rgba(99, 102, 241, 0.4);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-dim: #64748b;
+      --accent: #818cf8;
+      --accent-bright: #a5b4fc;
+      --green: #34d399;
+      --green-bg: rgba(52, 211, 153, 0.12);
+      --red: #f87171;
+      --red-bg: rgba(248, 113, 113, 0.12);
+      --yellow: #fbbf24;
+      --yellow-bg: rgba(251, 191, 36, 0.12);
+      --blue: #60a5fa;
+      --blue-bg: rgba(96, 165, 250, 0.12);
+      --purple: #c084fc;
+      --gradient-hero: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
+      --gradient-card: linear-gradient(145deg, rgba(99,102,241,0.06) 0%, rgba(192,132,252,0.04) 100%);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated BG ────────────────────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(99,102,241,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(192,132,252,0.06) 0%, transparent 60%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    .header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.35rem 1rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-badge .dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52,211,153,0.5); }
+      50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(52,211,153,0); }
+    }
+
+    .header h1 {
+      font-size: 2.8rem;
+      font-weight: 900;
+      background: var(--gradient-hero);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+      margin-bottom: 0.4rem;
+    }
+
+    .header h1 span { font-size: 2rem; }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* ── Cards ──────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--gradient-card), var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      backdrop-filter: blur(12px);
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .card:hover {
+      border-color: var(--border-glow);
+      box-shadow: 0 0 30px rgba(99,102,241,0.06);
+    }
+
+    .card-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-title .icon { font-size: 0.9rem; }
+
+    /* ── Stats Row ──────────────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .stat-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      transition: transform 0.2s, border-color 0.3s;
+    }
+
+    .stat-box:hover { transform: translateY(-2px); border-color: var(--border-glow); }
+
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+
+    .stat-box.wins .stat-value { color: var(--green); }
+    .stat-box.losses .stat-value { color: var(--red); }
+    .stat-box.total .stat-value { color: var(--accent-bright); }
+    .stat-box.winrate .stat-value { color: var(--yellow); }
+
+    /* ── Status Banner ──────────────────────────────────────────────────── */
+    .status-banner {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .status-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 100px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .badge-human { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(96,165,250,0.25); }
+    .badge-orc { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+    .badge-alive { background: var(--green-bg); color: var(--green); border: 1px solid rgba(52,211,153,0.25); }
+    .badge-dead { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+
+    .game-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--accent-bright);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.35rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(99,102,241,0.08);
+      transition: all 0.2s;
+    }
+
+    .game-link:hover {
+      background: rgba(99,102,241,0.18);
+      border-color: var(--border-glow);
+      transform: translateY(-1px);
+    }
+
+    /* ── Hero Card ──────────────────────────────────────────────────────── */
+    .hero-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .hero-stat {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(99,102,241,0.07);
+    }
+
+    .hero-stat:last-child { border-bottom: none; }
+
+    .hero-stat-label {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .hero-stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* ── HP / XP Bars ───────────────────────────────────────────────────── */
+    .bar-container {
+      margin-top: 1rem;
+    }
+
+    .bar-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.35rem;
+    }
+
+    .bar-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .bar-numbers {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .bar-track {
+      height: 10px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .bar-fill.hp {
+      background: linear-gradient(90deg, var(--red) 0%, var(--green) 60%, var(--green) 100%);
+    }
+
+    .bar-fill.xp {
+      background: linear-gradient(90deg, var(--accent) 0%, var(--purple) 100%);
+    }
+
+    /* ── Lanes ──────────────────────────────────────────────────────────── */
+    .lanes-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 0.75rem;
+    }
+
+    .lane-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      transition: border-color 0.3s;
+    }
+
+    .lane-card.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 20px rgba(99,102,241,0.1);
+    }
+
+    .lane-card.active::after {
+      content: '⚔️ HERE';
+      display: block;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: var(--accent-bright);
+      margin-top: 0.5rem;
+    }
+
+    .lane-name {
+      font-weight: 800;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      margin-bottom: 0.6rem;
+    }
+
+    .frontline-bar {
+      position: relative;
+      height: 8px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 100px;
+      overflow: visible;
+      margin: 0.6rem 0;
+    }
+
+    .frontline-marker {
+      position: absolute;
+      top: -3px;
+      width: 14px; height: 14px;
+      background: var(--accent);
+      border-radius: 50%;
+      border: 2px solid var(--bg-card);
+      transition: left 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 0 8px rgba(99,102,241,0.5);
+    }
+
+    .lane-units {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .lane-units .human-count { color: var(--blue); }
+    .lane-units .orc-count { color: var(--red); }
+
+    /* ── Abilities ──────────────────────────────────────────────────────── */
+    .abilities-list {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    .ability-tag {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(99,102,241,0.1);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 8px;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-bright);
+    }
+
+    /* ── Recall Badge ────────────────────────────────────────────────── */
+    .badge-recall-ready {
+      background: rgba(52, 211, 153, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(52, 211, 153, 0.25);
+    }
+    .badge-recall-cooldown {
+      background: var(--yellow-bg);
+      color: var(--yellow);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+    }
+    .bar-fill.recall {
+      background: linear-gradient(90deg, var(--yellow) 0%, var(--green) 100%);
+    }
+
+    .ability-level {
+      background: var(--accent);
+      color: var(--bg-primary);
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    /* ── History ─────────────────────────────────────────────────────────── */
+    .history-list {
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .history-list::-webkit-scrollbar { width: 4px; }
+    .history-list::-webkit-scrollbar-track { background: transparent; }
+    .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .history-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(99,102,241,0.06);
+      font-size: 0.82rem;
+    }
+
+    .history-row:last-child { border-bottom: none; }
+
+    .history-result {
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 4px;
+    }
+
+    .history-result.win { background: var(--green-bg); color: var(--green); }
+    .history-result.loss { background: var(--red-bg); color: var(--red); }
+
+    .history-meta {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Loading / Empty ────────────────────────────────────────────────── */
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-dim);
+    }
+
+    .loading .spinner {
+      display: inline-block;
+      width: 28px; height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 0.75rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────────────── */
+    .footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+    }
+
+    .footer span { color: var(--accent); }
+
+    .refresh-info {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      margin-top: 0.3rem;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .hero-details { grid-template-columns: 1fr; }
+      .lanes-grid { grid-template-columns: 1fr; }
+      .header h1 { font-size: 2rem; }
+      .status-banner { gap: 0.75rem; }
+    }
+
+    /* ── Fade-in animation ──────────────────────────────────────────────── */
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-in {
+      animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper" id="app">
+
+    <!-- Header -->
+    <header class="header animate-in">
+      <div class="header-badge">
+        <span class="dot"></span>
+        <span>Live Tracking</span>
+      </div>
+      <h1>AgentScoob <span>🐕</span></h1>
+      <p>Defense of the Agents — AI Bot Dashboard</p>
+    </header>
+
+    <!-- Stats Row -->
+    <div class="stats-grid animate-in" style="animation-delay: 0.08s" id="stats-grid">
+      <div class="stat-box total">
+        <div class="stat-value" id="stat-total">—</div>
+        <div class="stat-label">Total Games</div>
+      </div>
+      <div class="stat-box wins">
+        <div class="stat-value" id="stat-wins">—</div>
+        <div class="stat-label">Wins</div>
+      </div>
+      <div class="stat-box losses">
+        <div class="stat-value" id="stat-losses">—</div>
+        <div class="stat-label">Losses</div>
+      </div>
+      <div class="stat-box winrate">
+        <div class="stat-value" id="stat-winrate">—</div>
+        <div class="stat-label">Win Rate</div>
+      </div>
+    </div>
+
+    <!-- Content inserted by JS -->
+    <div id="content">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div>Scanning games for AgentScoob…</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Powered by <span>AgentScoob Bot</span> · defenseoftheagents.com
+      <div class="refresh-info" id="refresh-info">Auto-refresh every 10s</div>
+    </div>
+  </div>
+
+  <script>
+    const POLL_INTERVAL = 10_000;
+
+    async function fetchStatus() {
+      const res = await fetch('/api/status');
+      if (!res.ok) throw new Error('Failed to fetch');
+      return res.json();
+    }
+
+    function pct(val, max) {
+      if (!max) return 0;
+      return Math.max(0, Math.min(100, (val / max) * 100));
+    }
+
+    function timeAgo(ts) {
+      const diff = Date.now() - new Date(ts).getTime();
+      const m = Math.floor(diff / 60000);
+      if (m < 1) return 'just now';
+      if (m < 60) return `${m}m ago`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}h ago`;
+      return `${Math.floor(h / 24)}d ago`;
+    }
+
+    function abilityIcon(id) {
+      const icons = {
+        cleave: '⚔️', thorns: '🌿', divine_shield: '🛡️',
+        volley: '🏹', bloodlust: '🩸', critical_strike: '⚡',
+        fortitude: '💪', fury: '🔥'
+      };
+      return icons[id] || '✨';
+    }
+
+    function renderStats(stats) {
+      document.getElementById('stat-total').textContent = stats.totalGames;
+      document.getElementById('stat-wins').textContent = stats.wins;
+      document.getElementById('stat-losses').textContent = stats.losses;
+      const wr = stats.totalGames > 0
+        ? Math.round((stats.wins / stats.totalGames) * 100) + '%'
+        : '—';
+      document.getElementById('stat-winrate').textContent = wr;
+    }
+
+    function renderGame(g, idx, recallData) {
+      const hero = g.hero;
+      const factionClass = g.faction === 'human' ? 'badge-human' : 'badge-orc';
+      const factionLabel = g.faction === 'human' ? '🏰 Human' : '🪓 Orc';
+      const aliveClass = hero?.alive ? 'badge-alive' : 'badge-dead';
+      const aliveLabel = hero?.alive ? '❤️ Alive' : '💀 Dead';
+
+      // Recall status
+      const recallReady = !recallData?.isOnCooldown;
+      const recallBadgeClass = recallReady ? 'badge-recall-ready' : 'badge-recall-cooldown';
+      const recallCooldownSec = Math.ceil((recallData?.cooldownRemaining ?? 0) / 1000);
+      const recallLabel = recallReady ? '🏠 Recall Ready' : `⏳ Recall ${recallCooldownSec}s`;
+      const recallPct = recallReady ? 100 : Math.max(0, 100 - (recallData.cooldownRemaining / 120000) * 100);
+
+      const heroLane = hero?.lane ?? 'mid';
+
+      // Abilities
+      let abilitiesHtml = '<div class="empty-state" style="padding:0.5rem">No abilities yet</div>';
+      if (hero?.abilities?.length) {
+        abilitiesHtml = '<div class="abilities-list">' +
+          hero.abilities.map(a =>
+            `<div class="ability-tag">${abilityIcon(a.id)} ${a.id.replace(/_/g,' ')} <span class="ability-level">Lv${a.level}</span></div>`
+          ).join('') + '</div>';
+      }
+
+      // Lanes
+      const lanesHtml = ['top', 'mid', 'bot'].map(laneName => {
+        const lane = g.lanes[laneName];
+        const fl = lane.frontline;
+        const markerPct = 50 + (fl / 2); // -100..+100 → 0%..100%
+        const isActive = heroLane === laneName;
+        return `
+          <div class="lane-card ${isActive ? 'active' : ''}">
+            <div class="lane-name">${laneName}</div>
+            <div class="frontline-bar">
+              <div class="frontline-marker" style="left: calc(${markerPct}% - 7px)"></div>
+            </div>
+            <div class="lane-units">
+              <span class="human-count">👤 ${lane.human ?? 0}</span>
+              <span style="color:var(--text-dim);font-size:0.65rem">FL ${fl > 0 ? '+' : ''}${fl}</span>
+              <span class="orc-count">${lane.orc ?? 0} 👹</span>
+            </div>
+          </div>`;
+      }).join('');
+
+      // Teammates
+      const teammates = g.agents?.[g.faction] ?? [];
+      const enemies = g.agents?.[g.faction === 'human' ? 'orc' : 'human'] ?? [];
+
+      return `
+        <!-- Status -->
+        <div class="card animate-in" style="animation-delay:${0.12 + idx * 0.05}s">
+          <div class="card-title"><span class="icon">📡</span> Live Status — Game ${g.gameId}</div>
+          <div class="status-banner">
+            <div class="status-item">
+              <span class="status-label">Game</span>
+              <span class="status-value">#${g.gameId}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">Tick</span>
+              <span class="status-value">${g.tick?.toLocaleString() ?? '—'}</span>
+            </div>
+            <div class="status-item">
+              <span class="badge ${factionClass}">${factionLabel}</span>
+            </div>
+            <div class="status-item">
+              <span class="badge ${aliveClass}">${aliveLabel}</span>
+            </div>
+            <div class="status-item">
+              <span class="badge ${recallBadgeClass}">${recallLabel}</span>
+            </div>
+            <a class="game-link" href="https://www.defenseoftheagents.com/?game=${g.gameId}" target="_blank" rel="noopener">
+              🎮 Watch Live ↗
+            </a>
+          </div>
+        </div>
+
+        <!-- Hero Details -->
+        ${hero ? `
+        <div class="card animate-in" style="animation-delay:${0.18 + idx * 0.05}s">
+          <div class="card-title"><span class="icon">🗡️</span> Hero Stats</div>
+          <div class="hero-details">
+            <div>
+              <div class="hero-stat">
+                <span class="hero-stat-label">Class</span>
+                <span class="hero-stat-value">${hero.class === 'melee' ? '⚔️ Melee' : '🏹 Ranged'}</span>
+              </div>
+              <div class="hero-stat">
+                <span class="hero-stat-label">Level</span>
+                <span class="hero-stat-value">Lv ${hero.level}</span>
+              </div>
+              <div class="hero-stat">
+                <span class="hero-stat-label">Lane</span>
+                <span class="hero-stat-value">${heroLane.toUpperCase()}</span>
+              </div>
+            </div>
+            <div>
+              <div class="hero-stat">
+                <span class="hero-stat-label">Team Size</span>
+                <span class="hero-stat-value">${teammates.length} vs ${enemies.length}</span>
+              </div>
+              <div class="hero-stat">
+                <span class="hero-stat-label">Base HP</span>
+                <span class="hero-stat-value">${g.bases?.[g.faction]?.hp ?? '?'} / ${g.bases?.[g.faction]?.maxHp ?? '?'}</span>
+              </div>
+              <div class="hero-stat">
+                <span class="hero-stat-label">Enemy Base</span>
+                <span class="hero-stat-value">${g.bases?.[g.faction === 'human' ? 'orc' : 'human']?.hp ?? '?'} / ${g.bases?.[g.faction === 'human' ? 'orc' : 'human']?.maxHp ?? '?'}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- HP Bar -->
+          <div class="bar-container">
+            <div class="bar-header">
+              <span class="bar-label">Health</span>
+              <span class="bar-numbers">${hero.hp} / ${hero.maxHp}</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill hp" style="width: ${pct(hero.hp, hero.maxHp)}%"></div>
+            </div>
+          </div>
+
+          <!-- XP Bar -->
+          <div class="bar-container">
+            <div class="bar-header">
+              <span class="bar-label">Experience</span>
+              <span class="bar-numbers">${hero.xp} / ${hero.xpToNext}</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill xp" style="width: ${pct(hero.xp, hero.xpToNext)}%"></div>
+            </div>
+          </div>
+
+          <!-- Abilities -->
+          <div style="margin-top: 1rem">
+            <div class="bar-label" style="margin-bottom: 0.5rem">Abilities</div>
+            ${abilitiesHtml}
+          </div>
+
+          <!-- Recall Cooldown -->
+          <div class="bar-container">
+            <div class="bar-header">
+              <span class="bar-label">Recall</span>
+              <span class="bar-numbers">${recallReady ? 'Ready' : recallCooldownSec + 's cooldown'}</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill recall" style="width: ${recallPct}%"></div>
+            </div>
+          </div>
+        </div>` : ''}
+
+        <!-- Lanes -->
+        <div class="card animate-in" style="animation-delay:${0.24 + idx * 0.05}s">
+          <div class="card-title"><span class="icon">🗺️</span> Lane Status</div>
+          <div class="lanes-grid">${lanesHtml}</div>
+        </div>
+      `;
+    }
+
+    function renderHistory(stats) {
+      if (!stats.history?.length) {
+        return `<div class="card animate-in" style="animation-delay:0.3s">
+          <div class="card-title"><span class="icon">📜</span> Match History</div>
+          <div class="empty-state">No games recorded yet. Results appear when a game ends.</div>
+        </div>`;
+      }
+
+      const rows = [...stats.history].reverse().map(h => `
+        <div class="history-row">
+          <div style="display:flex;align-items:center;gap:0.75rem">
+            <span class="history-result ${h.result === 'WIN' ? 'win' : 'loss'}">${h.result}</span>
+            <span style="color:var(--text-secondary);font-size:0.82rem">Game #${h.gameId}</span>
+            <span class="badge ${h.faction === 'human' ? 'badge-human' : 'badge-orc'}" style="font-size:0.68rem;padding:0.15rem 0.5rem">
+              ${h.faction === 'human' ? '🏰' : '🪓'} ${h.faction}
+            </span>
+          </div>
+          <span class="history-meta">${timeAgo(h.timestamp)}</span>
+        </div>
+      `).join('');
+
+      return `<div class="card animate-in" style="animation-delay:0.3s">
+        <div class="card-title"><span class="icon">📜</span> Match History</div>
+        <div class="history-list">${rows}</div>
+      </div>`;
+    }
+
+    async function update() {
+      try {
+        const data = await fetchStatus();
+
+        // Stats
+        renderStats(data.stats);
+
+        // Content
+        let html = '';
+
+        if (data.activeGames.length === 0) {
+          html = `<div class="card animate-in">
+            <div class="card-title"><span class="icon">📡</span> Status</div>
+            <div class="empty-state">
+              AgentScoob is not currently in any active game.<br/>
+              The bot may be between games or not running.
+            </div>
+          </div>`;
+        } else {
+          html = data.activeGames.map((g, i) => renderGame(g, i, data.recall)).join('');
+        }
+
+        html += renderHistory(data.stats);
+
+        document.getElementById('content').innerHTML = html;
+        document.getElementById('refresh-info').textContent =
+          `Last updated: ${new Date().toLocaleTimeString()} · Auto-refresh every 10s`;
+      } catch (err) {
+        console.error('Update failed:', err);
+      }
+    }
+
+    // Initial load + polling
+    update();
+    setInterval(update, POLL_INTERVAL);
+  </script>
+</body>
+</html>
