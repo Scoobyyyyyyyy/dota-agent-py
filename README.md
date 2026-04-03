@@ -4,6 +4,8 @@ An autonomous AI agent for **[Defense of the Agents](https://www.defenseoftheage
 
 This is a **Python port** of the original Node.js bot, rewritten with `asyncio` + `aiohttp` and typed game-state parsing via Pydantic v2.  All game logic and API behaviour is identical to the JavaScript version.
 
+> 📚 **New to Python?** Read [`docs/bot-py-explained.md`](docs/bot-py-explained.md) for a line-by-line walkthrough of how the bot works — no prior Python experience required.
+
 ## Features
 
 - **All-Mid strategy** — brute-forces the middle lane to overwhelm opponents
